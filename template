@@ -1,0 +1,24 @@
+pkgname=ip-lookup
+version=1.2
+revision=1
+wrksrc="${pkgname}-${version}"
+build_style=gnu-makefile
+short_desc="An IP lookup tool"
+maintainer="Rich <rich@bandaholics.cash>"
+license="GPL-3.0-or-later"
+homepage="https://git.deadzone.lol/Wizzard/ip-lookup"
+hostmakedepends="git"
+makedepends="libcurl-devel cJSON-devel"
+do_fetch() {
+    git clone --depth 1 --branch "main" https://git.deadzone.lol/Wizzard/ip-lookup "${wrksrc}"
+}
+do_extract() {
+    :
+}
+do_build() {
+    make -C ${wrksrc} SRCDIR=${wrksrc}/src OBJDIR=${wrksrc}/bin
+}
+do_install() {
+    vbin ${wrksrc}/bin/ip-lookup
+}
+
