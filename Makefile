@@ -1,5 +1,9 @@
 CC=gcc
 CFLAGS=-lcurl -lcjson
+SRCDIR=src
+OBJDIR=bin
 
-ip-lookup: main.c
-	$(CC) -o ip-lookup main.c $(CFLAGS)
+# Use variables for source and object files
+ip-lookup: $(SRCDIR)/main.c
+	$(CC) -o $(OBJDIR)/ip-lookup $(SRCDIR)/main.c $(CFLAGS)
+
