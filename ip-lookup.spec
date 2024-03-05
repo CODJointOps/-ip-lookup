@@ -1,5 +1,5 @@
 Name:           ip-lookup
-Version:        1.2
+Version:        1.5
 Release:        1%{?dist}
 Summary:        A simple IP lookup tool
 License:        GPL

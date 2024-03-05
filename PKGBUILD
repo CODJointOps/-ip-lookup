@@ -1,5 +1,5 @@
 pkgname=ip-lookup
-pkgver=1.2
+pkgver=1.5
 pkgrel=1
 pkgdesc="A simple IP lookup tool that shows city, ASN, and other information. Deadzone.lol Motherfucker."
 arch=('x86_64')

@@ -3,6 +3,83 @@
 #include <string.h>
 #include <curl/curl.h>
 #include <cjson/cJSON.h>
+#include <arpa/inet.h>
+
+#define VPN_LIST_PATH "/tmp/ipv4.txt"
+
+#define VPN_LIST_URL "https://raw.githubusercontent.com/X4BNet/lists_vpn/main/ipv4.txt"
+
+unsigned long ip_to_ulong(const char *ip) {
+    struct in_addr inVal;
+    if (inet_aton(ip, &inVal)) {
+        return ntohl(inVal.s_addr);
+    }
+    return 0;
+}
+
+int ip_in_cidr(const char *ip, const char *cidr) {
+    unsigned long ip_addr = ip_to_ulong(ip);
+    int mask;
+    char cidr_ip[INET_ADDRSTRLEN];
+
+    sscanf(cidr, "%[^/]/%d", cidr_ip, &mask);
+    unsigned long cidr_addr = ip_to_ulong(cidr_ip);
+    unsigned long cidr_mask = mask ? (~0 << (32 - mask)) : 0;
+
+    return (ip_addr & cidr_mask) == (cidr_addr & cidr_mask);
+}
+
+int is_vpn(const char *ip_address) {
+    FILE *file = fopen(VPN_LIST_PATH, "r");
+    if (!file) {
+        fprintf(stderr, "Cannot open VPN list file.\n");
+        return -1;
+    }
+
+    char line[INET_ADDRSTRLEN + 4];
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = 0;
+        if (ip_in_cidr(ip_address, line)) {
+            fclose(file);
+            return 1;
+        }
+    }
+
+    fclose(file);
+    return 0;
+}
+
+static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
+void download_vpn_list(const char *url, const char *output_path) {
+    CURL *curl;
+    FILE *fp;
+    CURLcode res;
+
+    curl = curl_easy_init();
+    if (curl) {
+        fp = fopen(output_path, "wb");
+        if (fp == NULL) {
+            fprintf(stderr, "Cannot open file %s\n", output_path);
+            return;
+        }
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+
+        fclose(fp);
+        curl_easy_cleanup(curl);
+    }
+}
 
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
@@ -12,6 +89,9 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
 }
 
 int main(int argc, char *argv[]) {
+    int vpnCheck = is_vpn(argv[1]);
+    download_vpn_list(VPN_LIST_URL, VPN_LIST_PATH);
+
     if (argc != 2) {
         printf("Usage: %s <IP_ADDRESS>\n", argv[0]);
         return 1;
@@ -80,6 +160,7 @@ int main(int argc, char *argv[]) {
     printf("ISP: %s\n", isp ? isp->valuestring : "Unknown");
     printf("Organization: %s\n", org ? org->valuestring : "Unknown");
     printf("AS: %s\n", as ? as->valuestring : "Unknown");
+    printf("VPN: %s\n", vpnCheck ? "True" : "False");
 
     cJSON_Delete(json);
     return 0;
