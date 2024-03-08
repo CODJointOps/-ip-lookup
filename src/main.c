@@ -54,17 +54,19 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
-void download_vpn_list(const char *url, const char *output_path) {
+int download_vpn_list(const char *url, const char *output_path) {
     CURL *curl;
     FILE *fp;
     CURLcode res;
+    int result = 1; // Assume failure
 
     curl = curl_easy_init();
     if (curl) {
         fp = fopen(output_path, "wb");
         if (fp == NULL) {
             fprintf(stderr, "Cannot open file %s\n", output_path);
-            return;
+            curl_easy_cleanup(curl);
+            return result;
         }
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -72,13 +74,16 @@ void download_vpn_list(const char *url, const char *output_path) {
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
         res = curl_easy_perform(curl);
 
-        if (res != CURLE_OK) {
+        if (res == CURLE_OK) {
+            result = 0; // Success
+        } else {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
         }
 
         fclose(fp);
         curl_easy_cleanup(curl);
     }
+    return result;
 }
 
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
@@ -89,13 +94,17 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
 }
 
 int main(int argc, char *argv[]) {
-    int vpnCheck = is_vpn(argv[1]);
-    download_vpn_list(VPN_LIST_URL, VPN_LIST_PATH);
-
     if (argc != 2) {
         printf("Usage: %s <IP_ADDRESS>\n", argv[0]);
         return 1;
     }
+
+    if (download_vpn_list(VPN_LIST_URL, VPN_LIST_PATH) != 0) {
+        fprintf(stderr, "Failed to download VPN list.\n");
+        return 1;
+    }
+
+    int vpnCheck = is_vpn(argv[1]);
 
     char url[256] = "http://ip-api.com/json/";
     strcat(url, argv[1]);
