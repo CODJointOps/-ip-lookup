@@ -71,8 +71,6 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 int download_vpn_list(const char *url, const char *output_path) {
-    printf("Downloading VPN lists...\n");
-
     struct stat fileInfo;
     time_t now;
     double hours;
