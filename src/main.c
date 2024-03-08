@@ -8,9 +8,22 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#define VPN_LIST_PATH "/tmp/ipv4.txt"
+#define VPN_DB_DIR "/tmp/vpndb"
+#define VPN_LIST_PATH VPN_DB_DIR "/ipv4.txt"
 
 #define VPN_LIST_URL "https://raw.githubusercontent.com/X4BNet/lists_vpn/main/ipv4.txt"
+
+int ensure_directory_exists(const char *dirPath) {
+    struct stat st = {0};
+
+    if (stat(dirPath, &st) == -1) {
+        if (mkdir(dirPath, 0755) == -1) {
+            fprintf(stderr, "Failed to create directory %s\n", dirPath);
+            return -1;
+        }
+    }
+    return 0;
+}
 
 unsigned long ip_to_ulong(const char *ip) {
     struct in_addr inVal;
@@ -58,6 +71,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 int download_vpn_list(const char *url, const char *output_path) {
+    printf("Downloading VPN lists...\n");
 
     struct stat fileInfo;
     time_t now;
@@ -114,6 +128,11 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("Usage: %s <IP_ADDRESS>\n", argv[0]);
+        return 1;
+    }
+
+    if (ensure_directory_exists(VPN_DB_DIR) != 0) {
+        fprintf(stderr, "Failed to create VPN database directory.\n");
         return 1;
     }
 
