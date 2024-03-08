@@ -4,6 +4,9 @@
 #include <curl/curl.h>
 #include <cjson/cJSON.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #define VPN_LIST_PATH "/tmp/ipv4.txt"
 
@@ -55,6 +58,21 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 }
 
 int download_vpn_list(const char *url, const char *output_path) {
+
+    struct stat fileInfo;
+    time_t now;
+    double hours;
+
+    time(&now);
+
+    if (stat(output_path, &fileInfo) == 0) {
+        hours = difftime(now, fileInfo.st_mtime) / (60.0 * 60.0);
+
+        if (hours < 24.0) {
+            return 0;
+        }
+    }
+
     CURL *curl;
     FILE *fp;
     CURLcode res;
